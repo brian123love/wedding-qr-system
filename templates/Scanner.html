@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wedding QR Check-in</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+    <h1>Wedding Check-in</h1>
+    <div id="reader" style="width:300px;"></div>
+    <div id="result"></div>
+
+<script>
+function onScanSuccess(decodedText, decodedResult) {
+    // Extract 'id' from scanned URL
+    const urlParams = new URL(decodedText).searchParams;
+    const guestId = urlParams.get('id');
+
+    fetch('/checkin', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({id: guestId})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'success') {
+            document.getElementById('result').innerHTML = `Welcome ${data.name} ✅`;
+        } else if(data.status === 'already') {
+            document.getElementById('result').innerHTML = `${data.name} already checked-in ⚠️`;
+        } else {
+            document.getElementById('result').innerHTML = `Error: ${data.message}`;
+        }
+    });
+}
+
+// Initialize HTML5 QR scanner
+var html5QrcodeScanner = new Html5QrcodeScanner(
+    "reader", { fps: 10, qrbox: 250 }
+);
+html5QrcodeScanner.render(onScanSuccess);
+</script>
+</body>
+</html>
