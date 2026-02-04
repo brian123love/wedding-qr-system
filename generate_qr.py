@@ -4,7 +4,7 @@ import uuid
 import os
 import re
 
-RENDER_URL ="https://wedding-qr-system-1.onrender.com"
+RENDER_URL ="https://wedding-qr-system-2.onrender.com"
 
 #Read guest from CSV file 
 guests= pd.read_csv("guests.csv")
