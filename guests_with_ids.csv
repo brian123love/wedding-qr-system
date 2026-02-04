@@ -1,0 +1,5 @@
+name,email,unique_id,checked_in
+MariaPaul,maria@example.com,7e0ad286-78fe-4491-b618-7f9b3df6779c,NO
+JohnDoe,john@example.com,42d7b11e-0a64-4a43-bd6b-d88491dd57fd,NO
+AnaSaid,ana@example.com,329f55dc-ba6b-49db-a6fd-d985a0641a15,NO
+Brianlove,brian@example.com,21ff98b5-2510-40eb-a809-616d01ae6613,NO
