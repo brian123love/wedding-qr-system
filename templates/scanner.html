@@ -3,85 +3,149 @@
 <head>
     <title>Wedding QR Check-in</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            margin-top: 20px;
         }
 
         #reader {
             width: 300px;
-            margin: auto;
+            margin: 20px auto;
         }
 
         #result {
-            margin-top: 20px;
-            font-size: 24px;
+            margin-top: 30px;
+            font-size: 35px;
             font-weight: bold;
         }
-    </style>
-</head>
-<body>
 
-    <h1>Wedding Check-in</h1>
-    <div id="reader"></div>
-    <div id="result"></div>
-
-    <script>
-        let scanning = true;
-
-        function onScanSuccess(decodedText, decodedResult) {
-
-            if (!scanning) return; // prevent multiple scans
-            scanning = false;
-
-            const urlParams = new URL(decodedText).searchParams;
-            const guestId = urlParams.get('id');
-
-            fetch('/checkin', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({id: guestId})
-            })
-            .then(res => res.json())
-            .then(data => {
-
-                const resultDiv = document.getElementById('result');
-
-                if(data.status === 'success') {
-                    resultDiv.innerHTML = `<span style="color:green;">Welcome ${data.name} ✅</span>`;
-                } 
-                else if(data.status === 'already') {
-                    resultDiv.innerHTML = `<span style="color:orange;">${data.name} already checked-in ⚠️</span>`;
-                } 
-                else {
-                    resultDiv.innerHTML = `<span style="color:red;">Error: ${data.message}</span>`;
-                }
-
-                // Pause scanner
-                html5QrcodeScanner.pause(true);
-
-                // Resume scanning after 1 second
-                setTimeout(() => {
-                    resultDiv.innerHTML = "";
-                    html5QrcodeScanner.resume();
-                    scanning = true;
-                }, 1000);
-
-            })
-            .catch(err => {
-                console.error(err);
-                scanning = true;
-            });
+        select {
+            padding: 8px;
+            font-size: 16px;
+            margin-top: 10px;
         }
 
-        var html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader",
-            { fps: 10, qrbox: 250 }
-        );
+        .success { color: green; }
+        .already { color: orange; }
+        .error { color: red; }
+    </style>
+</head>
 
-        html5QrcodeScanner.render(onScanSuccess);
-    </script>
+<body>
+
+<h1>Wedding Check-in</h1>
+
+<label>Select Camera:</label><br>
+<select id="cameraSelect"></select>
+
+<div id="reader"></div>
+<div id="result"></div>
+
+<script>
+
+let html5QrCode;
+let lastScannedId = null;
+let lastScanTime = 0;
+const cooldown = 3000;
+
+const resultDiv = document.getElementById("result");
+const cameraSelect = document.getElementById("cameraSelect");
+
+function onScanSuccess(decodedText) {
+
+    const urlParams = new URL(decodedText).searchParams;
+    const guestId = urlParams.get('id');
+    if (!guestId) return;
+
+    const now = Date.now();
+
+    if (guestId === lastScannedId && (now - lastScanTime) < cooldown) {
+        return;
+    }
+
+    lastScannedId = guestId;
+    lastScanTime = now;
+
+    fetch('/checkin', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({id: guestId})
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        if(data.status === 'success') {
+            resultDiv.innerHTML = `<span class="success">
+                Welcome ${data.name} ✅
+            </span>`;
+        } 
+        else if(data.status === 'already') {
+            resultDiv.innerHTML = `<span class="already">
+                ${data.name} already checked-in ⚠️
+            </span>`;
+        } 
+        else {
+            resultDiv.innerHTML = `<span class="error">
+                Error: ${data.message}
+            </span>`;
+        }
+
+    })
+    .catch(err => console.error(err));
+}
+
+function startScanner(cameraId) {
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            html5QrCode.start(
+                cameraId,
+                { fps: 10, qrbox: 250 },
+                onScanSuccess
+            );
+        });
+    } else {
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start(
+            cameraId,
+            { fps: 10, qrbox: 250 },
+            onScanSuccess
+        );
+    }
+}
+
+// Load cameras
+Html5Qrcode.getCameras().then(devices => {
+
+    if (devices && devices.length) {
+
+        devices.forEach(device => {
+            const option = document.createElement("option");
+            option.value = device.id;
+            option.text = device.label || `Camera ${cameraSelect.length + 1}`;
+            cameraSelect.appendChild(option);
+        });
+
+        // Start with first camera (usually back camera on phone)
+        startScanner(devices[0].id);
+
+        cameraSelect.addEventListener("change", function() {
+            startScanner(this.value);
+        });
+    }
+}).catch(err => {
+    console.error("Camera error:", err);
+});
+
+</script>
 
 </body>
 </html>
