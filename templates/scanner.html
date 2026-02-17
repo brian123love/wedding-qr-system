@@ -73,7 +73,7 @@
 
 let lastScannedId = null;
 let lastScanTime = 0;
-const cooldown = 3000;
+const cooldown = 2000;
 
 function showOverlay(message, colorClass) {
     const overlay = document.getElementById("overlay");
@@ -83,7 +83,7 @@ function showOverlay(message, colorClass) {
 
     setTimeout(() => {
         overlay.style.display = "none";
-    }, 4000);
+    }, 2000);
 }
 
 function onScanSuccess(decodedText) {
