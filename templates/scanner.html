@@ -2,16 +2,80 @@
 <html>
 <head>
     <title>Wedding QR Check-in</title>
-    <script src="https://unpkg.com/html5-qrcode"type="text/javascript"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        #reader {
+            width: 300px;
+            margin: auto;
+        }
+
+        /* Full screen result overlay */
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            z-index: 9999;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .welcome {
+            background-color: #28a745; /* Green */
+        }
+
+        .already {
+            background-color: #ff9800; /* Orange */
+        }
+    </style>
 </head>
 <body>
+
     <h1>Wedding Check-in</h1>
-    <div id="reader" style="width:300px;"></div>
-    <div id="result"></div>
+    <div id="reader"></div>
+
+    <!-- Big Animated Overlay -->
+    <div id="overlay"></div>
 
 <script>
-function onScanSuccess(decodedText, decodedResult) {
-    // Extract 'id' from scanned URL
+let scanning = true;
+
+function showOverlay(message, type) {
+    const overlay = document.getElementById("overlay");
+    overlay.className = type;
+    overlay.innerHTML = message;
+    overlay.style.display = "flex";
+
+    setTimeout(() => {
+        overlay.style.display = "none";
+        html5QrcodeScanner.resume();
+        scanning = true;
+    }, 5000);
+}
+
+function onScanSuccess(decodedText) {
+
+    if (!scanning) return;
+    scanning = false;
+
     const urlParams = new URL(decodedText).searchParams;
     const guestId = urlParams.get('id');
 
@@ -22,21 +86,32 @@ function onScanSuccess(decodedText, decodedResult) {
     })
     .then(res => res.json())
     .then(data => {
+
+        html5QrcodeScanner.pause(true);
+
         if(data.status === 'success') {
-            document.getElementById('result').innerHTML = `Welcome ${data.name} ✅`;
-        } else if(data.status === 'already') {
-            document.getElementById('result').innerHTML = `${data.name} already checked-in ⚠️`;
-        } else {
-            document.getElementById('result').innerHTML = `Error: ${data.message}`;
+            showOverlay(`Welcome ${data.name} ✅`, "welcome");
+        } 
+        else if(data.status === 'already') {
+            showOverlay(`${data.name} already checked-in ⚠️`, "already");
+        } 
+        else {
+            showOverlay(`Error: ${data.message}`, "already");
         }
+    })
+    .catch(err => {
+        console.error(err);
+        scanning = true;
     });
 }
 
-// Initialize HTML5 QR scanner
 var html5QrcodeScanner = new Html5QrcodeScanner(
-    "reader", { fps: 10, qrbox: 250 }
+    "reader",
+    { fps: 10, qrbox: 250 }
 );
+
 html5QrcodeScanner.render(onScanSuccess);
 </script>
+
 </body>
 </html>
