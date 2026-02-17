@@ -7,14 +7,13 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
             margin: 0;
-            padding: 0;
+            text-align: center;
             background-color: #f5f5f5;
         }
 
         h1 {
-            margin-top: 20px;
+            margin-top: 15px;
         }
 
         #reader {
@@ -23,20 +22,41 @@
         }
 
         #result {
-            margin-top: 30px;
-            font-size: 35px;
+            margin-top: 20px;
+            font-size: 28px;
             font-weight: bold;
         }
 
-        select {
-            padding: 8px;
-            font-size: 16px;
-            margin-top: 10px;
+        /* FULL SCREEN OVERLAY */
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            font-size: 50px;
+            font-weight: bold;
+            z-index: 9999;
+            animation: fadeIn 0.4s ease-in-out;
         }
 
-        .success { color: green; }
-        .already { color: orange; }
-        .error { color: red; }
+        .green {
+            background-color: #28a745;
+        }
+
+        .orange {
+            background-color: #ff9800;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
 
@@ -44,21 +64,27 @@
 
 <h1>Wedding Check-in</h1>
 
-<label>Select Camera:</label><br>
-<select id="cameraSelect"></select>
-
 <div id="reader"></div>
 <div id="result"></div>
 
+<div id="overlay"></div>
+
 <script>
 
-let html5QrCode;
 let lastScannedId = null;
 let lastScanTime = 0;
 const cooldown = 3000;
 
-const resultDiv = document.getElementById("result");
-const cameraSelect = document.getElementById("cameraSelect");
+function showOverlay(message, colorClass) {
+    const overlay = document.getElementById("overlay");
+    overlay.className = colorClass;
+    overlay.innerHTML = message;
+    overlay.style.display = "flex";
+
+    setTimeout(() => {
+        overlay.style.display = "none";
+    }, 4000);
+}
 
 function onScanSuccess(decodedText) {
 
@@ -68,6 +94,7 @@ function onScanSuccess(decodedText) {
 
     const now = Date.now();
 
+    // Prevent double scan
     if (guestId === lastScannedId && (now - lastScanTime) < cooldown) {
         return;
     }
@@ -84,66 +111,27 @@ function onScanSuccess(decodedText) {
     .then(data => {
 
         if(data.status === 'success') {
-            resultDiv.innerHTML = `<span class="success">
-                Welcome ${data.name} ✅
-            </span>`;
+            showOverlay(`Welcome ${data.name} ✅`, "green");
         } 
         else if(data.status === 'already') {
-            resultDiv.innerHTML = `<span class="already">
-                ${data.name} already checked-in ⚠️
-            </span>`;
-        } 
-        else {
-            resultDiv.innerHTML = `<span class="error">
-                Error: ${data.message}
-            </span>`;
+            showOverlay(`${data.name} Already Checked-in ⚠️`, "orange");
         }
 
     })
     .catch(err => console.error(err));
 }
 
-function startScanner(cameraId) {
-    if (html5QrCode) {
-        html5QrCode.stop().then(() => {
-            html5QrCode.start(
-                cameraId,
-                { fps: 10, qrbox: 250 },
-                onScanSuccess
-            );
-        });
-    } else {
-        html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start(
-            cameraId,
-            { fps: 10, qrbox: 250 },
-            onScanSuccess
-        );
+var html5QrcodeScanner = new Html5QrcodeScanner(
+    "reader",
+    {
+        fps: 10,
+        qrbox: 250,
+        rememberLastUsedCamera: true,
+        showTorchButtonIfSupported: true
     }
-}
+);
 
-// Load cameras
-Html5Qrcode.getCameras().then(devices => {
-
-    if (devices && devices.length) {
-
-        devices.forEach(device => {
-            const option = document.createElement("option");
-            option.value = device.id;
-            option.text = device.label || `Camera ${cameraSelect.length + 1}`;
-            cameraSelect.appendChild(option);
-        });
-
-        // Start with first camera (usually back camera on phone)
-        startScanner(devices[0].id);
-
-        cameraSelect.addEventListener("change", function() {
-            startScanner(this.value);
-        });
-    }
-}).catch(err => {
-    console.error("Camera error:", err);
-});
+html5QrcodeScanner.render(onScanSuccess);
 
 </script>
 
