@@ -61,12 +61,12 @@
                 // Pause scanner
                 html5QrcodeScanner.pause(true);
 
-                // Resume scanning after 5 seconds
+                // Resume scanning after 3 seconds
                 setTimeout(() => {
                     resultDiv.innerHTML = "";
                     html5QrcodeScanner.resume();
                     scanning = true;
-                }, 5000);
+                }, 3000);
 
             })
             .catch(err => {
