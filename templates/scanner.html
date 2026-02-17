@@ -3,47 +3,32 @@
 <head>
     <title>Wedding QR Check-in</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
             text-align: center;
+            background-color: #f7f7f7;
         }
 
         #reader {
             width: 300px;
-            margin: auto;
+            margin: 50px auto;
         }
 
-        /* Full screen result overlay */
-        #overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            color: white;
-            font-size: 40px;
+        #result {
+            margin-top: 50px;
+            font-size: 48px;
             font-weight: bold;
-            z-index: 9999;
-            animation: fadeIn 0.5s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
         }
 
         .welcome {
-            background-color: #28a745; /* Green */
+            color: #28a745; /* Green */
         }
 
         .already {
-            background-color: #ff9800; /* Orange */
+            color: #ff9800; /* Orange */
         }
     </style>
 </head>
@@ -51,67 +36,63 @@
 
     <h1>Wedding Check-in</h1>
     <div id="reader"></div>
+    <div id="result"></div>
 
-    <!-- Big Animated Overlay -->
-    <div id="overlay"></div>
+    <script>
+        let scanning = true;
 
-<script>
-let scanning = true;
+        function onScanSuccess(decodedText, decodedResult) {
 
-function showOverlay(message, type) {
-    const overlay = document.getElementById("overlay");
-    overlay.className = type;
-    overlay.innerHTML = message;
-    overlay.style.display = "flex";
+            if (!scanning) return; // prevent multiple scans
+            scanning = false;
 
-    setTimeout(() => {
-        overlay.style.display = "none";
-        html5QrcodeScanner.resume();
-        scanning = true;
-    }, 5000);
-}
+            const urlParams = new URL(decodedText).searchParams;
+            const guestId = urlParams.get('id');
 
-function onScanSuccess(decodedText) {
+            fetch('/checkin', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({id: guestId})
+            })
+            .then(res => res.json())
+            .then(data => {
 
-    if (!scanning) return;
-    scanning = false;
+                const resultDiv = document.getElementById('result');
 
-    const urlParams = new URL(decodedText).searchParams;
-    const guestId = urlParams.get('id');
+                if(data.status === 'success') {
+                    resultDiv.innerHTML = `<span class="welcome">Welcome ${data.name} ✅</span>`;
+                } 
+                else if(data.status === 'already') {
+                    resultDiv.innerHTML = `<span class="already">${data.name} already checked-in ⚠️</span>`;
+                } 
+                else {
+                    resultDiv.innerHTML = `<span style="color:red;">Error: ${data.message}</span>`;
+                }
 
-    fetch('/checkin', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({id: guestId})
-    })
-    .then(res => res.json())
-    .then(data => {
+                // Pause scanner
+                html5QrcodeScanner.pause(true);
 
-        html5QrcodeScanner.pause(true);
+                // Resume scanning after 5 seconds
+                setTimeout(() => {
+                    resultDiv.innerHTML = "";
+                    html5QrcodeScanner.resume();
+                    scanning = true;
+                }, 5000);
 
-        if(data.status === 'success') {
-            showOverlay(`Welcome ${data.name} ✅`, "welcome");
-        } 
-        else if(data.status === 'already') {
-            showOverlay(`${data.name} already checked-in ⚠️`, "already");
-        } 
-        else {
-            showOverlay(`Error: ${data.message}`, "already");
+            })
+            .catch(err => {
+                console.error(err);
+                scanning = true;
+            });
         }
-    })
-    .catch(err => {
-        console.error(err);
-        scanning = true;
-    });
-}
 
-var html5QrcodeScanner = new Html5QrcodeScanner(
-    "reader",
-    { fps: 10, qrbox: 250 }
-);
+        var html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader",
+            { fps: 10, qrbox: 250 }
+        );
 
-html5QrcodeScanner.render(onScanSuccess);
-</script>
+        html5QrcodeScanner.render(onScanSuccess);
+    </script>
 
 </body>
 </html>
