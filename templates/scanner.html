@@ -5,30 +5,19 @@
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 0;
+            font-family: Arial, sans-serif;
             text-align: center;
-            background-color: #f7f7f7;
         }
 
         #reader {
             width: 300px;
-            margin: 50px auto;
+            margin: auto;
         }
 
         #result {
-            margin-top: 50px;
-            font-size: 48px;
+            margin-top: 20px;
+            font-size: 24px;
             font-weight: bold;
-        }
-
-        .welcome {
-            color: #28a745; /* Green */
-        }
-
-        .already {
-            color: #ff9800; /* Orange */
         }
     </style>
 </head>
@@ -60,10 +49,10 @@
                 const resultDiv = document.getElementById('result');
 
                 if(data.status === 'success') {
-                    resultDiv.innerHTML = `<span class="welcome">Welcome ${data.name} ✅</span>`;
+                    resultDiv.innerHTML = `<span style="color:green;">Welcome ${data.name} ✅</span>`;
                 } 
                 else if(data.status === 'already') {
-                    resultDiv.innerHTML = `<span class="already">${data.name} already checked-in ⚠️</span>`;
+                    resultDiv.innerHTML = `<span style="color:orange;">${data.name} already checked-in ⚠️</span>`;
                 } 
                 else {
                     resultDiv.innerHTML = `<span style="color:red;">Error: ${data.message}</span>`;
