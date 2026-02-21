@@ -1,59 +1,59 @@
 from flask import Flask, request, jsonify, render_template
-import sqlite3
-import csv
 import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import csv
 
 app = Flask(__name__)
 
-DATABASE = "guests.db"
-CSV_FILE = "guests_with_ids.csv"
+# -----------------------------
+# DATABASE CONNECTION
+# -----------------------------
+# Get Render DATABASE_URL from environment
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
+def get_conn():
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 # -----------------------------
-# CREATE DATABASE + TABLE
+# INITIALIZE DATABASE
 # -----------------------------
 def init_db():
-    conn = sqlite3.connect(DATABASE)
+    conn = get_conn()
     cursor = conn.cursor()
-
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS guests (
             unique_id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
-            checked_in INTEGER DEFAULT 0
+            checked_in BOOLEAN DEFAULT FALSE
         )
     """)
-
     conn.commit()
     conn.close()
 
 init_db()
 
+# -----------------------------
+# IMPORT CSV TO DATABASE
+# -----------------------------
+CSV_FILE = "guests_with_ids.csv"
 
-# -----------------------------
-# IMPORT CSV INTO DATABASE
-# (Runs safely, no duplicates)
-# -----------------------------
 def import_csv_to_db():
-    conn = sqlite3.connect(DATABASE)
+    conn = get_conn()
     cursor = conn.cursor()
-
     if os.path.exists(CSV_FILE):
         with open(CSV_FILE, newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
-
             for row in reader:
                 cursor.execute("""
-                    INSERT OR IGNORE INTO guests (unique_id, name)
-                    VALUES (?, ?)
-                """, (row["unique_id"], row["name"]))
-
+                    INSERT INTO guests (unique_id, name, checked_in)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (unique_id) DO NOTHING
+                """, (row["unique_id"], row["name"], row.get("checked_in")=="YES"))
         conn.commit()
-
     conn.close()
 
 import_csv_to_db()
-
 
 # -----------------------------
 # SCANNER PAGE
@@ -64,76 +64,51 @@ def scanner_page():
 
 
 # -----------------------------
-# CHECK-IN ROUTE (PERMANENT)
+# CHECK-IN ROUTE
 # -----------------------------
 @app.route('/checkin', methods=['POST'])
 def checkin():
     data = request.get_json()
+    if not data or "id" not in data:
+        return jsonify({"status": "error", "message": "No ID provided"}), 400
 
-    if not data:
-        return jsonify({"status": "error", "message": "No JSON received"}), 400
+    scanned_id = data["id"]
 
-    scanned_id = data.get("id")
-
-    if not scanned_id:
-        return jsonify({"status": "error", "message": "No ID in JSON"}), 400
-
-    conn = sqlite3.connect(DATABASE)
+    conn = get_conn()
     cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT name, checked_in FROM guests WHERE unique_id = ?",
-        (scanned_id,)
-    )
-
+    cursor.execute("SELECT name, checked_in FROM guests WHERE unique_id = %s", (scanned_id,))
     guest = cursor.fetchone()
 
     if not guest:
         conn.close()
         return jsonify({"status": "error", "message": "Guest not found"})
 
-    name, checked_in = guest
-
-    if checked_in == 1:
+    if guest["checked_in"]:
         conn.close()
-        return jsonify({"status": "already", "name": name})
+        return jsonify({"status": "already", "name": guest["name"]})
 
-    cursor.execute(
-        "UPDATE guests SET checked_in = 1 WHERE unique_id = ?",
-        (scanned_id,)
-    )
-
+    cursor.execute("UPDATE guests SET checked_in = TRUE WHERE unique_id = %s", (scanned_id,))
     conn.commit()
     conn.close()
 
-    return jsonify({
-        "status": "success",
-        "name": name
-    })
+    return jsonify({"status": "success", "name": guest["name"]})
 
 
 # -----------------------------
-# GET ALL GUESTS (FOR SIDEBAR)
+# GET ALL GUESTS
 # -----------------------------
 @app.route('/guests', methods=['GET'])
 def get_guests():
-    conn = sqlite3.connect(DATABASE)
+    conn = get_conn()
     cursor = conn.cursor()
-
-    cursor.execute("SELECT unique_id, name, checked_in FROM guests")
+    cursor.execute("SELECT unique_id, name, checked_in FROM guests ORDER BY name")
     rows = cursor.fetchall()
-
     conn.close()
 
-    guests = []
-    for row in rows:
-        guests.append({
-            "id": row[0],
-            "name": row[1],
-            "checked_in": bool(row[2])
-        })
-
-    return jsonify(guests)
+    return jsonify([
+        {"id": row["unique_id"], "name": row["name"], "checked_in": row["checked_in"]}
+        for row in rows
+    ])
 
 
 # -----------------------------
