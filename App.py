@@ -117,7 +117,7 @@ def get_guests():
 def delete_guest(uid):
     conn=get_conn()
     cursor=conn.cursor()
-    cursor.execute("DELETE FROM guests WHERE unique_id=%s""(uid,))
+    cursor.execute("DELETE FROM guests WHERE unique_id=%s"(uid,))
     conn.commit()
     conn.close()
     return"Deleted"
