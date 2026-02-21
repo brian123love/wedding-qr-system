@@ -25,7 +25,7 @@ if not result:
 
 # Extract unique_id from scanned URL
 scanned_data = result[0].data.decode("utf-8")
-# Assuming QR contains: https://wedding-qr-system-2.onrender.com/checkin?id=<unique_id>
+# Assuming QR contains: https://wedding-qr-system-3.onrender.com/checkin?id=<unique_id>
 if "id=" not in scanned_data:
     print("❌ QR code format invalid.")
     exit()
