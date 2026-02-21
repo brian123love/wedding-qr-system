@@ -121,6 +121,17 @@ def get_guests():
         for row in rows
     ])
 
+# -----------------------------
+# DELETE GUEST (for duplicates)
+# -----------------------------
+@app.route('/delete/<uid>')
+def delete_guest(uid):
+    conn=get_conn()
+    cursor=conn.cursor()
+    cursor.execute("DELETE FROM guests WHERE unique_id=%s",(uid,))
+    conn.commit()
+    conn.close()
+    return f"Delete guest with ID {uid}"
 
 # -----------------------------
 # RUN APP
