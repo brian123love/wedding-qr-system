@@ -63,12 +63,15 @@ if choice == "1":
 elif choice == "2":
     new_guest_name = input("Enter full name of new guest: ").strip()
 
+    new_guest_email = input("Enter guest email: ").strip()
+    
     if new_guest_name.lower() in guests["name"].str.lower().values:
         print("⚠️ Guest already exists.") 
     else:
         new_uid = str(uuid.uuid4())
         new_row = {
             "name": new_guest_name,
+            "email": new_guest_email,
             "unique_id": new_uid,
             "checked_in": "NO"
         }
