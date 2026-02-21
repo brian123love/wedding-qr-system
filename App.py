@@ -13,7 +13,7 @@ app = Flask(__name__)
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_conn():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    return psycopg2.connect(os.environ["DATABASE_URL"], sslmode="require")
 
 # -----------------------------
 # INITIALIZE DATABASE
