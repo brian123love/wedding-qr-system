@@ -13,7 +13,7 @@ app = Flask(__name__)
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_conn():
-    return psycopg2.connect(os.environ["DATABASE_URL"], sslmode="require")
+    return psycopg2.connect("DATABASE_URL",  cursor_factory=RealDictCursor)
 
 # -----------------------------
 # INITIALIZE DATABASE
@@ -117,7 +117,7 @@ def get_guests():
 def delete_guest(uid):
     conn=get_conn()
     cursor=conn.cursor()
-    cursor.execute("DELETE FROM guests WHERE unique_id=%s",(uid,))
+    cursor.execute("DELETE FROM guests WHERE unique_id=%s"(uid,))
     conn.commit()
     conn.close()
     return"Deleted"
