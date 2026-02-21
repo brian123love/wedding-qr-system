@@ -3,6 +3,8 @@ import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import csv
+import urllib.parse as urlparse
+
 
 app = Flask(__name__)
 
@@ -13,7 +15,16 @@ app = Flask(__name__)
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_conn():
-    return psycopg2.connect("DATABASE_URL",  cursor_factory=RealDictCursor)
+    url=urlparse.urlparse(DATABASE_URL)
+    return psycopg2.connect(
+        dbname=url.path[1:],
+        user=url.username,
+        password=url.password,
+        host=url.hostname,
+        port=url.port,
+        sslmode="require",
+        cursor_factory=RealDictCursor
+        )
 
 # -----------------------------
 # INITIALIZE DATABASE
